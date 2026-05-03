@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AciumExpress</title>
+    <style>
+        :root { --gold: #D4AF37; --dark: #1a1a1a; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #333; }
+        
+        .tela { display: none; }
+        .ativa { display: block; }
+
+        /* Login Box */
+        .login-container {
+            height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--dark);
+        }
+        .login-box {
+            background: white; padding: 40px; border-radius: 15px; text-align: center; width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        h2 { margin-top: 0; color: var(--dark); }
+        input { 
+            width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; 
+            border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+        }
+        
+        /* App Style */
+        header { background: var(--dark); color: var(--gold); padding: 20px; text-align: center; position: sticky; top: 0; z-index: 100; }
+        .container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding: 20px; max-width: 1100px; margin: 0 auto; }
+        
+        .card { background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
+        .card img { width: 100%; height: 200px; object-fit: cover; }
+        .info { padding: 15px; }
+        .preco { color: #27ae60; font-size: 1.3rem; font-weight: bold; margin: 10px 0; }
+        
+        /* Botões */
+        .btn-gold { background: var(--gold); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn-sacola { position: fixed; bottom: 20px; right: 20px; background: #e74c3c; color: white; padding: 15px 25px; border-radius: 50px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; }
+
+        /* Modal */
+        #modal-sacola { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center; }
+        .conteudo-modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+        
+        .item-removivel { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; }
+        .btn-remove { background: #ff4757; color: white; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <div id="tela-login" class="tela ativa">
+        <div class="login-container">
+            <div class="login-box">
+                <h2>Acium Express</h2>
+                <p>Acesse sua conta</p>
+                <input type="email" id="email-user" placeholder="E-mail" required>
+                <input type="password" id="senha-user" placeholder="Senha (mín. 6 dígitos)" required>
+                <button class="btn-gold" onclick="fazerLogin()">ENTRAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA PRINCIPAL -->
+    <div id="tela-app" class="tela">
+        <header>
+            <h1>ACIUM EXPRESS</h1>
+            <p id="msg-boas-vindas"></p>
+        </header>
+
+        <button class="btn-sacola" onclick="abrirSacola()">
+            🛍️ Sacola (<span id="contador">0</span>)
+        </button>
+
+        <div id="vitrine" class="container"></div>
+    </div>
+
+    <!-- MODAL DA SACOLA -->
+    <div id="modal-sacola">
+        <div class="conteudo-modal">
+            <h2>Sua Sacola 🛍️</h2>
+            <div id="itens-sacola"></div>
+            <hr>
+            <h3>Total: R$ <span id="total-valor">0,00</span></h3>
+            <button onclick="enviarParaWhatsApp()" style="background: #27ae60; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer;">FINALIZAR NO WHATSAPP</button>
+            <button onclick="fecharSacola()" style="background: #95a5a6; color: white; border: none; padding: 10px; width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer;">Voltar</button>
+        </div>
+    </div>
+
+    <script>
+        const MEU_ZAP = "557399748961"; 
+        
+        const joias = [
+            { nome: "Anel de Diamante", preco: 2500.00, img: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400" },
+            { nome: "Colar Ouro 18k", preco: 1800.00, img: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400" },
+            { nome: "Relógio Luxury", preco: 1200.00, img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400" },
+            { nome: "Brincos de Prata", preco: 450.00, img: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400" }
+        ];
+
+        let sacola = [];
+        let usuarioEmail = "";
+
+        function fazerLogin() {
+            const email = document.getElementById('email-user').value;
+            const senha = document.getElementById('senha-user').value;
+
+            if (email.includes('@') && senha.length >= 6) {
+                usuarioEmail = email;
+                document.getElementById('tela-login').classList.remove('ativa');
+                document.getElementById('tela-app').classList.add('ativa');
+                document.getElementById('msg-boas-vindas').innerText = `Bem-vindo, ${email.split('@')[0]}!`;
+                renderizarProdutos();
+            } else {
+                alert("Erro: E-mail inválido ou senha muito curta.");
+            }
+        }
+
+        function renderizarProdutos() {
+            const vitrine = document.getElementById('vitrine');
+            vitrine.innerHTML = ""; 
+            joias.forEach((j, index) => {
+                vitrine.innerHTML += `
+                    <div class="card">
+                        <img src="${j.img}">
+                        <div class="info">
+                            <h3>${j.nome}</h3>
+                            <p class="preco">R$ ${j.preco.toFixed(2)}</p>
+                            <button class="btn-gold" onclick="adicionar(${index})">ADICIONAR</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function adicionar(index) {
+            sacola.push(joias[index]);
+            atualizarContador();
+            alert(`${joias[index].nome} adicionado!`);
+        }
+
+        function atualizarContador() {
+            document.getElementById('contador').innerText = sacola.length;
+        }
+
+        function abrirSacola() {
+            const modal = document.getElementById('modal-sacola');
+            const lista = document.getElementById('itens-sacola');
+            const totalTxt = document.getElementById('total-valor');
+            modal.style.display = 'flex';
+            
+            if(sacola.length === 0) {
+                lista.innerHTML = "<p>Sua sacola está vazia.</p>";
+                totalTxt.innerText = "0,00";
+            } else {
+                lista.innerHTML = "";
+                let total = 0;
+                sacola.forEach((item, index) => {
+                    lista.innerHTML += `
+                        <div class="item-removivel">
+                            <span>💎 ${item.nome} - <b>R$ ${item.preco.toFixed(2)}</b></span>
+                            <button class="btn-remove" onclick="removerItem(${index})">Remover</button>
+                        </div>`;
+                    total += item.preco;
+                });
+                totalTxt.innerText = total.toFixed(2);
+            }
+        }
+
+        function removerItem(index) {
+            sacola.splice(index, 1); // Remove o item do array
+            atualizarContador();    // Atualiza a bolinha da sacola
+            abrirSacola();          // Recarrega a lista no modal
+        }
+
+        function fecharSacola() { document.getElementById('modal-sacola').style.display = 'none'; }
+
+        function enviarParaWhatsApp() {
+            if (sacola.length === 0) return alert("Sua sacola está vazia!");
+
+            let texto = `*PEDIDO ACIUMSEXPRESS*\n\n`;
+            texto += `*Cliente:* ${usuarioEmail}\n`;
+            texto += `--------------------------\n`;
+            
+            let total = 0;
+            sacola.forEach((item, i) => {
+                texto += `${i+1}. ${item.nome} - R$ ${item.preco.toFixed(2)}\n`;
+                total += item.preco;
+            });
+
+            texto += `--------------------------\n`;
+            texto += `*VALOR TOTAL: R$ ${total.toFixed(2)}*`;
+
+            const link = `https://api.whatsapp.com/send?phone=${MEU_ZAP}&text=${encodeURIComponent(texto)}`;
+            window.open(link, '_blank');
+        }
+    </script>
+</body>
+</html>
